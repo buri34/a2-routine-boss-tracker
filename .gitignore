@@ -1,0 +1,14 @@
+/node_modules/
+/src-tauri/target/
+/src-tauri/gen/
+/release/
+*.log
+.env
+.env.*
+!.env.example
+state.json
+*.pem
+*.key
+*.pfx
+*.p12
+.DS_Store

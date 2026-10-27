@@ -1,0 +1,16 @@
+{
+  "name": "a2-routine-boss-tracker",
+  "private": true,
+  "version": "0.2.32",
+  "description": "AION2の日課・週課・ボスをローカルで管理する非公式Windowsアプリ",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "npm run test && cargo check --manifest-path src-tauri/Cargo.toml",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.5"
+  }
+}

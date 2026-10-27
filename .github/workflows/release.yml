@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        shell: pwsh
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Verify tag and source versions
+        shell: pwsh
+        run: |
+          $TagVersion = $env:GITHUB_REF_NAME.TrimStart("v")
+          $PackageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $TauriVersion = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $CargoVersion = (Select-String -Path src-tauri/Cargo.toml -Pattern '^version = "([^"]+)"$').Matches[0].Groups[1].Value
+          if (($TagVersion -ne $PackageVersion) -or ($TagVersion -ne $TauriVersion) -or ($TagVersion -ne $CargoVersion)) {
+            throw "Version mismatch: tag=$TagVersion package=$PackageVersion tauri=$TauriVersion cargo=$CargoVersion"
+          }
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: |
+          npm test
+          cargo test --locked --manifest-path src-tauri/Cargo.toml
+
+      - name: Build portable executable and NSIS installer
+        run: npm run tauri -- build --bundles nsis
+
+      - name: Assemble release artifacts
+        shell: pwsh
+        run: |
+          $Version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $Artifacts = Join-Path $PWD "artifacts"
+          $Portable = Join-Path $Artifacts "A2-Routine-Boss-Tracker-v$Version-portable"
+          New-Item -ItemType Directory -Force -Path $Portable | Out-Null
+          Copy-Item "src-tauri/target/release/A2RoutineBossTracker.exe" $Portable
+          Copy-Item README.md, LICENSE, PRIVACY.md $Portable
+          $Zip = Join-Path $Artifacts "A2-Routine-Boss-Tracker-v$Version-portable.zip"
+          Compress-Archive -Path "$Portable/*" -DestinationPath $Zip -CompressionLevel Optimal
+
+          $InstallerSource = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $InstallerSource) { throw "NSIS installer was not generated" }
+          $Installer = Join-Path $Artifacts "A2-Routine-Boss-Tracker-v$Version-setup.exe"
+          Copy-Item $InstallerSource.FullName $Installer
+
+          $Checksums = @(
+            "$(Get-FileHash $Zip -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $(Split-Path $Zip -Leaf)"
+            "$(Get-FileHash $Installer -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $(Split-Path $Installer -Leaf)"
+          )
+          $Checksums |
+            ForEach-Object { $_.ToLowerInvariant() } |
+            Set-Content (Join-Path $Artifacts "SHA256SUMS.txt") -Encoding ascii
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: artifacts/*
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $Tag = $env:GITHUB_REF_NAME
+          if (gh release view $Tag 2>$null) {
+            gh release upload $Tag artifacts/* --clobber
+          } else {
+            gh release create $Tag artifacts/* --verify-tag --generate-notes --title "A2 ルーティン&ボストラッカー $Tag"
+          }

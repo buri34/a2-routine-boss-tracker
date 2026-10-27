@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "A2 ルーティン&ボストラッカーのメインウィンドウ用権限",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

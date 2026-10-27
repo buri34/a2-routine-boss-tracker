@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A2 ルーティン&amp;ボストラッカー v0.2.32</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="メインナビゲーション">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">A2</div>
+          <div><strong>A2 ルーティン&amp;ボストラッカー</strong><span>日課 · 週課 · ボス管理 · v0.2.32</span></div>
+        </div>
+        <nav id="nav"></nav>
+        <div class="sidebar-foot">
+          <span class="status-dot"></span>
+          <div><strong>ローカル保存</strong><small>外部通信なし</small></div>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">グローバル日本 · 日本標準時</p>
+            <h1 id="page-title">ダッシュボード</h1>
+          </div>
+          <div class="reset-clocks" id="reset-clocks"></div>
+        </header>
+        <section id="view" class="view" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <input type="file" id="import-file" accept="application/json" hidden />
+    <script src="core.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
