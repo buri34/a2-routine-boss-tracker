@@ -1,7 +1,7 @@
 {
   "name": "a2-routine-boss-tracker",
   "private": true,
-  "version": "0.2.32",
+  "version": "0.2.33",
   "description": "AION2の日課・週課・ボスをローカルで管理する非公式Windowsアプリ",
   "license": "MIT",
   "type": "commonjs",
