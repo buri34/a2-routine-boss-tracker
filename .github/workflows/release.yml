@@ -78,7 +78,7 @@ jobs:
             Set-Content (Join-Path $Artifacts "SHA256SUMS.txt") -Encoding ascii
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-release
           path: artifacts/*
