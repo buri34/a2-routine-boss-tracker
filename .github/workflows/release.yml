@@ -90,8 +90,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $Tag = $env:GITHUB_REF_NAME
+          $Version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $Assets = @(
+            "artifacts/A2-Routine-Boss-Tracker-v$Version-portable.zip"
+            "artifacts/A2-Routine-Boss-Tracker-v$Version-setup.exe"
+            "artifacts/SHA256SUMS.txt"
+          )
           if (gh release view $Tag 2>$null) {
-            gh release upload $Tag artifacts/* --clobber
+            gh release upload $Tag $Assets --clobber
           } else {
-            gh release create $Tag artifacts/* --verify-tag --generate-notes --title "A2 ルーティン&ボストラッカー $Tag"
+            gh release create $Tag $Assets --verify-tag --generate-notes --title "A2 ルーティン&ボストラッカー $Tag"
           }
