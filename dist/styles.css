@@ -34,9 +34,6 @@ nav { display: grid; gap: 5px; }
 .nav-button:hover { color: var(--text); background: #0f1d1a; border-color: var(--border); }
 .nav-button.active { color: var(--mint); background: #10231e; border-color: #2d584c; box-shadow: inset 3px 0 0 var(--mint); }
 .nav-icon { width: 18px; text-align: center; font-family: ui-monospace, monospace; font-size: 11px; color: currentColor; }
-.sidebar-foot { margin-top: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); border-top: 1px solid var(--border); padding: 18px 8px 0; font-size: 11px; }
-.sidebar-foot strong, .sidebar-foot small { display: block; }
-.sidebar-foot small { margin-top: 3px; }
 .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 12px var(--green); }
 main { min-width: 0; }
 .topbar { min-height: 92px; padding: 20px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(7, 16, 15, .82); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 10; }

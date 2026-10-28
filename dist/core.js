@@ -7,30 +7,30 @@
 
   const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const STATE_VERSION = 9;
+  const STATE_VERSION = 11;
   const ODE_ALERT_THRESHOLD = 720;
   const PRIORITY_LEVELS = ["urgent", "high", "normal", "low"];
   const PRIORITY_LABELS = { urgent: "最優先", high: "高", normal: "通常", low: "低" };
   const SHARED_PRIORITY_DEFAULTS = {
-    dailyQuests: "normal",
+    dailyQuests: "urgent",
     shugo: "normal",
     invasionKeys: "normal",
-    dailyDungeon: "normal",
-    weeklyDemonic: "normal",
-    weeklyAbyss: "normal",
-    serverOdeCrafted: "normal",
-    afResult: "normal",
+    dailyDungeon: "high",
+    weeklyDemonic: "high",
+    weeklyAbyss: "high",
+    serverOdeCrafted: "high",
+    afResult: "urgent",
   };
   const CHARACTER_PRIORITY_DEFAULTS = {
     farmGiena: "normal",
     supplyDaily: "normal",
     sanctuary: "normal",
-    awakening: "normal",
+    awakening: "high",
     battleground: "normal",
     supplyWeekly: "normal",
     seasonWeekly: "normal",
-    odePurchased: "normal",
-    odeCrafted: "normal",
+    odePurchased: "high",
+    odeCrafted: "high",
     odeLow: "low",
     odeHigh: "urgent",
     nightmareLow: "normal",
@@ -60,14 +60,15 @@
   }
   const WORLD_BOSS_DEFAULTS = [
     {
-      id: "asmodian",
-      name: "魔族大陸",
+      id: "faction",
+      name: "魔族/天族",
       bosses: [
-        { id: "immortal-gartua", name: "不滅のガルトゥア", baseTime: "09:02", intervalHours: 12, notifyMinutes: [30] },
-        { id: "legion-commander-ragta", name: "軍団長ラグタ", baseTime: "05:07", intervalHours: 12, notifyMinutes: [30] },
+        { id: "immortal-gartua", name: "不滅のガルトゥア", baseTime: "09:02", intervalHours: 12, notifyMinutes: [30, 10, 5] },
+        { id: "legion-commander-ragta", name: "軍団長ラグタ", baseTime: "05:07", intervalHours: 12, notifyMinutes: [30, 10, 5] },
+        { id: "silent-tartan", name: "沈黙のタルタン", baseTime: "21:13", intervalHours: 6, notifyMinutes: [10, 5] },
+        { id: "soul-ruler-kashapa", name: "魂の支配者カシャパ", baseTime: "21:14", intervalHours: 6, notifyMinutes: [10, 5] },
       ],
     },
-    { id: "elyos", name: "天族大陸", bosses: [] },
     {
       id: "abyss",
       name: "アビス",
@@ -331,6 +332,7 @@
   }
 
   function makeCharacter(id, index) {
+    const isPrimary = index === 0;
     return {
       id,
       name: `キャラクター${index + 1}`,
@@ -344,13 +346,13 @@
       supplyWeekly: false,
       seasonWeekly: false,
       tracked: {
-        farmGiena: true,
-        supplyDaily: true,
-        sanctuary: true,
+        farmGiena: isPrimary,
+        supplyDaily: isPrimary,
+        sanctuary: isPrimary,
         awakening: true,
-        battleground: true,
-        supplyWeekly: true,
-        seasonWeekly: true,
+        battleground: isPrimary,
+        supplyWeekly: isPrimary,
+        seasonWeekly: isPrimary,
         odePurchased: true,
         odeCrafted: true,
         odeState: true,
@@ -580,7 +582,7 @@
       addTask("awakening", "覚醒戦", `残り${character.awakening}回`, character.awakening <= 0, "weekly", weeklyDeadline, 3);
       addTask("battleground", "戦場", `${character.battleground} / 3`, character.battleground >= 3, "weekly", weeklyDeadline, 4);
       addTask("supplyWeekly", "補給依頼（週）", "内容未確認", character.supplyWeekly, "weekly", weeklyDeadline, 5);
-      addTask("seasonWeekly", "シーズンミッション（週）", "未購入", character.seasonWeekly, "weekly", weeklyDeadline, 6);
+      addTask("seasonWeekly", "シーズンミッション（週）", "未完了", character.seasonWeekly, "weekly", weeklyDeadline, 6);
       addTask("odePurchased", "オードショップ購入", `${character.odePurchased} / 20`, character.odePurchased >= 20, "weekly", weeklyDeadline, 7);
       addTask("odeCrafted", "オード物質変換（キャラ）", `${character.odeCrafted} / 4`, character.odeCrafted >= 4, "weekly", weeklyDeadline, 8);
 

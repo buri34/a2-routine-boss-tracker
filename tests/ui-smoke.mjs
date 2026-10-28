@@ -122,6 +122,18 @@ assert.ok(await evaluate(`document.querySelector('.managed-toggle[data-path="cha
 assert.ok(await evaluate(`document.body.textContent.includes("オードショップ購入")`));
 assert.ok(await evaluate(`document.body.textContent.includes("オード物質変換（キャラ）")`));
 
+await evaluate(`document.querySelector('.char-tab[data-id="char-2"]').click()`);
+await new Promise((resolve) => setTimeout(resolve, 150));
+for (const key of ["farmGiena", "supplyDaily", "sanctuary", "battleground", "supplyWeekly", "seasonWeekly"]) {
+  assert.equal(
+    await evaluate(`document.querySelector('.managed-toggle[data-path="characters.1.tracked.${key}"]').getAttribute("aria-pressed")`),
+    "false",
+  );
+}
+assert.equal(await evaluate(`document.querySelector('.managed-toggle[data-path="characters.1.tracked.awakening"]').getAttribute("aria-pressed")`), "true");
+await evaluate(`document.querySelector('.char-tab[data-id="char-1"]').click()`);
+await new Promise((resolve) => setTimeout(resolve, 150));
+
 await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(naturalSelector)}); input.focus(); input.value = "750"; input.dispatchEvent(new Event("input", { bubbles: true })); input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); })()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
 assert.equal(await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).characters[0].odeNatural`), 750);
@@ -214,11 +226,12 @@ assert.equal(
 );
 assert.equal(await evaluate(`document.body.textContent.includes("補給要請")`), false);
 assert.equal(await evaluate(`document.body.textContent.includes("シーズン任務")`), false);
-assert.equal(await evaluate(`document.querySelector('.summary-card[data-summary="daily"] .metric-value').textContent`), "0 / 10");
-assert.equal(await evaluate(`document.querySelector('.summary-card[data-summary="weekly"] .metric-value').textContent`), "2 / 33");
+assert.equal(await evaluate(`document.querySelector('.summary-card[data-summary="daily"] .metric-value').textContent`), "0 / 4");
+assert.equal(await evaluate(`document.querySelector('.summary-card[data-summary="weekly"] .metric-value').textContent`), "2 / 21");
+assert.equal(await evaluate(`document.body.textContent.includes("未購入")`), false);
 assert.equal(await evaluate(`document.querySelectorAll('[data-path="shared.exploration"], [data-path="shared.conquest"], [data-path="shared.transcendence"]').length`), 0);
 assert.equal(await evaluate(`document.querySelectorAll('.next-action-row').length`), 5);
-assert.equal(await evaluate(`document.querySelector('.next-action-row .next-action-main strong').textContent`), "オード 720以上");
+assert.equal(await evaluate(`document.querySelector('.next-action-row .next-action-main strong').textContent`), "デイリークエスト");
 assert.equal(await evaluate(`document.querySelector('.priority-modal') === null`), true);
 await evaluate(`document.querySelector('[data-action="open-priority-settings"]').click()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
@@ -226,6 +239,7 @@ assert.ok(await evaluate(`document.querySelector('.priority-settings') !== null`
 assert.equal(await evaluate(`document.querySelector('.priority-modal').getAttribute('role')`), "dialog");
 assert.equal(await evaluate(`document.querySelector('.priority-modal').getAttribute('aria-modal')`), "true");
 assert.equal(await evaluate(`getComputedStyle(document.querySelector('.priority-modal-backdrop')).position`), "fixed");
+assert.equal(await evaluate(`document.querySelector('[data-action="export-priorities"]') === null`), true);
 assert.ok(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オードショップ購入")`));
 assert.ok(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オード物質変換（キャラ）")`));
 assert.ok(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オード物質変換（サーバー）")`));
@@ -236,6 +250,11 @@ assert.equal(await evaluate(`document.querySelectorAll('.priority-settings-colum
 assert.equal(await evaluate(`document.querySelector('.priority-settings [data-path="shared.priorities.weeklyMissions"]') === null`), true);
 assert.equal(await evaluate(`document.querySelector('.priority-settings [data-path="characters.0.priorities.farmGiena"]') === null`), true);
 const dailyQuestUrgentSelector = '.priority-choice[data-path="shared.priorities.dailyQuests"][data-priority="urgent"]';
+assert.equal(await evaluate(`document.querySelector(${JSON.stringify(dailyQuestUrgentSelector)}).getAttribute("aria-pressed")`), "true");
+assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="shared.priorities.dailyDungeon"][data-priority="high"]').getAttribute("aria-pressed")`), "true");
+assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="shared.priorities.afResult"][data-priority="urgent"]').getAttribute("aria-pressed")`), "true");
+assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="characters.0.priorities.awakening"][data-priority="high"]').getAttribute("aria-pressed")`), "true");
+assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="characters.0.priorities.odePurchased"][data-priority="high"]').getAttribute("aria-pressed")`), "true");
 await evaluate(`document.querySelector(${JSON.stringify(dailyQuestUrgentSelector)}).click()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
 assert.equal(await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).shared.priorities.dailyQuests`), "urgent");
@@ -264,9 +283,31 @@ assert.equal(await evaluate(`document.querySelector('.priority-modal') === null`
 
 await command("Page.navigate", { url: "http://127.0.0.1:8772/?view=world-bosses" });
 await new Promise((resolve) => setTimeout(resolve, 300));
-assert.equal(await evaluate(`document.querySelectorAll('.world-boss-tab').length`), 3);
-assert.equal(await evaluate(`document.querySelectorAll('.boss-card').length`), 2);
+assert.equal(await evaluate(`document.querySelectorAll('.world-boss-tab').length`), 2);
+assert.deepEqual(
+  await evaluate(`Array.from(document.querySelectorAll('.world-boss-tab'), (node) => node.childNodes[0].textContent)`),
+  ["魔族/天族", "アビス"],
+);
+assert.equal(await evaluate(`document.querySelectorAll('.boss-card').length`), 4);
+assert.equal(await evaluate(`document.querySelector('.sidebar-foot') === null`), true);
+assert.equal(await evaluate(`document.body.textContent.includes('ローカル保存')`), false);
+assert.equal(await evaluate(`document.body.textContent.includes('外部通信なし')`), false);
 assert.equal(await evaluate(`document.querySelector('.boss-card h3').textContent`), "不滅のガルトゥア");
+assert.deepEqual(
+  await evaluate(`Array.from(document.querySelectorAll('.boss-card h3'), (node) => node.textContent)`),
+  ["不滅のガルトゥア", "軍団長ラグタ", "沈黙のタルタン", "魂の支配者カシャパ"],
+);
+assert.equal(await evaluate(`document.querySelector('.boss-time-input[data-id="silent-tartan"]').value`), "21:13");
+assert.equal(await evaluate(`document.querySelector('[data-boss-id="silent-tartan"] .boss-time-setting span').textContent`), "から6時間ごと");
+assert.equal(await evaluate(`document.querySelector('.boss-time-input[data-id="soul-ruler-kashapa"]').value`), "21:14");
+assert.equal(await evaluate(`document.querySelector('[data-boss-id="soul-ruler-kashapa"] .boss-time-setting span').textContent`), "から6時間ごと");
+assert.equal(await evaluate(`document.querySelector('[data-boss-id="silent-tartan"] [data-minutes="10"]').getAttribute("aria-pressed")`), "true");
+await evaluate(`document.querySelector('[data-boss-id="silent-tartan"] [data-minutes="10"]').click()`);
+await new Promise((resolve) => setTimeout(resolve, 150));
+assert.deepEqual(
+  await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).worldBosses[0].bosses[2].notifyMinutes`),
+  [5],
+);
 const gartuaTimeSelector = '.boss-time-input[data-id="immortal-gartua"]';
 const gartuaInputIdentity = await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(gartuaTimeSelector)}); window.__bossTimeInput = input; input.click(); return input === document.querySelector(${JSON.stringify(gartuaTimeSelector)}); })()`);
 assert.equal(gartuaInputIdentity, true, "clicking a boss time input must not replace it before the native picker opens");
@@ -277,12 +318,14 @@ assert.equal(
   "10:15",
 );
 assert.equal(await evaluate(`document.querySelector('[data-boss-id="immortal-gartua"] [data-minutes="30"]').getAttribute("aria-pressed")`), "true");
+assert.equal(await evaluate(`document.querySelector('[data-boss-id="immortal-gartua"] [data-minutes="10"]').getAttribute("aria-pressed")`), "true");
+assert.equal(await evaluate(`document.querySelector('[data-boss-id="immortal-gartua"] [data-minutes="5"]').getAttribute("aria-pressed")`), "true");
 assert.equal(await evaluate(`document.querySelector('[data-boss-id="immortal-gartua"] [data-minutes="5"]').textContent`), "5分");
 await evaluate(`document.querySelector('[data-boss-id="immortal-gartua"] [data-minutes="10"]').click()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
 assert.deepEqual(
   await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).worldBosses[0].bosses[0].notifyMinutes`),
-  [30, 10],
+  [30, 5],
 );
 await evaluate(`document.querySelector('.world-boss-tab[data-id="abyss"]').click()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
@@ -298,11 +341,11 @@ const nahmaTimeSelector = '.boss-time-input[data-id="guardian-general-nahma"]';
 await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(nahmaTimeSelector)}); input.value = "22:15"; input.dispatchEvent(new Event("change", { bubbles: true })); })()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
 assert.equal(
-  await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).worldBosses[2].bosses[1].time`),
+  await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).worldBosses[1].bosses[1].time`),
   "22:15",
 );
 assert.deepEqual(
-  await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).worldBosses[2].bosses[1].notifyMinutes`),
+  await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).worldBosses[1].bosses[1].notifyMinutes`),
   [60, 50, 40, 30],
 );
 assert.equal(await evaluate(`document.querySelector('.boss-time-input[data-id="spirit-king-agro"]').value`), "09:32");
@@ -310,7 +353,7 @@ assert.equal(await evaluate(`document.querySelector('[data-boss-id="spirit-king-
 await evaluate(`document.querySelector('[data-boss-id="spirit-king-agro"] [data-minutes="5"]').click()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
 assert.deepEqual(
-  await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).worldBosses[2].bosses[2].notifyMinutes`),
+  await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).worldBosses[1].bosses[2].notifyMinutes`),
   [30, 5],
 );
 
@@ -383,7 +426,7 @@ await new Promise((resolve) => setTimeout(resolve, 100));
 assert.ok(await evaluate(`document.querySelector('[data-summary-detail="daily"]') !== null`));
 assert.ok(await evaluate(`document.querySelector('[data-summary-detail="daily"]').textContent.includes("今日の未完了")`));
 assert.ok(await evaluate(`document.querySelector('[data-summary-detail="daily"]').textContent.includes("デイリークエスト")`));
-assert.equal(await evaluate(`document.querySelectorAll('[data-summary-detail="daily"] .summary-detail-row').length`), 10);
+assert.equal(await evaluate(`document.querySelectorAll('[data-summary-detail="daily"] .summary-detail-row').length`), 4);
 await evaluate(`document.querySelector('[data-summary-detail="daily"] .summary-detail-row[data-view-target="shared"]').click()`);
 await new Promise((resolve) => setTimeout(resolve, 100));
 assert.equal(await evaluate(`document.querySelector('.nav-button.active').textContent.includes("アカウント共有")`), true);

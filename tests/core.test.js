@@ -69,7 +69,7 @@ test("known v1 Abyss value clipped to 8 is restored to 20 once", () => {
   state.shared.weeklyDemonic = 12;
   state.shared.weeklyAbyss = 8;
   const result = C.catchUp(state, jst(2026, 10, 21, 16));
-  assert.equal(result.version, 9);
+  assert.equal(result.version, 11);
   assert.equal(result.shared.weeklyDemonic, 12);
   assert.equal(result.shared.weeklyAbyss, 20);
 });
@@ -81,7 +81,7 @@ test("legacy reward-decay counters are removed during state migration", () => {
   state.shared.conquest = 80;
   state.shared.transcendence = 60;
   const result = C.catchUp(state, jst(2026, 10, 21, 16));
-  assert.equal(result.version, 9);
+  assert.equal(result.version, 11);
   assert.equal("exploration" in result.shared, false);
   assert.equal("conquest" in result.shared, false);
   assert.equal("transcendence" in result.shared, false);
@@ -164,7 +164,7 @@ test("legacy state receives recurring event defaults without changing valid prog
   state.shared.weeklyAbyss = 8;
   delete state.recurringEvents;
   const migrated = C.catchUp(state, jst(2026, 10, 26, 7));
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 11);
   assert.equal(migrated.shared.weeklyAbyss, 8, "v3 progress must not repeat the old 8-to-20 repair");
   assert.deepEqual(migrated.recurringEvents.map((event) => event.name), ["シューゴフェスタ", "次元侵攻", "時空の裂け目"]);
 });
@@ -220,23 +220,36 @@ test("character alert summary identifies the exact warning sources", () => {
   assert.deepEqual(C.characterAlerts(character), []);
 });
 
-test("world boss defaults contain three regions and required bosses", () => {
+test("world boss defaults combine faction regions and contain required bosses", () => {
   const categories = C.worldBossDefaults();
-  assert.deepEqual(categories.map((category) => category.name), ["魔族大陸", "天族大陸", "アビス"]);
-  assert.deepEqual(categories[0].bosses.map((boss) => boss.name), ["不滅のガルトゥア", "軍団長ラグタ"]);
+  assert.deepEqual(categories.map((category) => category.id), ["faction", "abyss"]);
+  assert.deepEqual(categories.map((category) => category.name), ["魔族/天族", "アビス"]);
+  assert.deepEqual(categories[0].bosses.map((boss) => boss.name), [
+    "不滅のガルトゥア",
+    "軍団長ラグタ",
+    "沈黙のタルタン",
+    "魂の支配者カシャパ",
+  ]);
   assert.equal(categories[0].bosses[0].intervalHours, 12);
-  assert.deepEqual(categories[0].bosses[0].notifyMinutes, [30]);
-  assert.equal(categories[2].bosses[0].name, "監視者カイラ");
-  assert.equal(categories[2].bosses[0].intervalHours, 3);
-  assert.deepEqual(categories[2].bosses[0].notifyMinutes, []);
-  assert.equal(categories[2].bosses[1].name, "守護神将ナフマ");
-  assert.deepEqual(categories[2].bosses[1].weekdays, [5, 0]);
-  assert.equal(categories[2].bosses[1].time, "21:00");
-  assert.deepEqual(categories[2].bosses[1].notifyMinutes, [60, 50, 40, 30]);
-  assert.equal(categories[2].bosses[2].name, "精霊王アグロ");
-  assert.equal(categories[2].bosses[2].baseTime, "09:32");
-  assert.equal(categories[2].bosses[2].intervalHours, 12);
-  assert.deepEqual(categories[2].bosses[2].notifyMinutes, [30]);
+  assert.deepEqual(categories[0].bosses[0].notifyMinutes, [30, 10, 5]);
+  assert.deepEqual(categories[0].bosses[1].notifyMinutes, [30, 10, 5]);
+  assert.equal(categories[0].bosses[2].baseTime, "21:13");
+  assert.equal(categories[0].bosses[2].intervalHours, 6);
+  assert.deepEqual(categories[0].bosses[2].notifyMinutes, [10, 5]);
+  assert.equal(categories[0].bosses[3].baseTime, "21:14");
+  assert.equal(categories[0].bosses[3].intervalHours, 6);
+  assert.deepEqual(categories[0].bosses[3].notifyMinutes, [10, 5]);
+  assert.equal(categories[1].bosses[0].name, "監視者カイラ");
+  assert.equal(categories[1].bosses[0].intervalHours, 3);
+  assert.deepEqual(categories[1].bosses[0].notifyMinutes, []);
+  assert.equal(categories[1].bosses[1].name, "守護神将ナフマ");
+  assert.deepEqual(categories[1].bosses[1].weekdays, [5, 0]);
+  assert.equal(categories[1].bosses[1].time, "21:00");
+  assert.deepEqual(categories[1].bosses[1].notifyMinutes, [60, 50, 40, 30]);
+  assert.equal(categories[1].bosses[2].name, "精霊王アグロ");
+  assert.equal(categories[1].bosses[2].baseTime, "09:32");
+  assert.equal(categories[1].bosses[2].intervalHours, 12);
+  assert.deepEqual(categories[1].bosses[2].notifyMinutes, [30]);
 });
 
 test("weekly world boss occurrences use selected JST weekdays", () => {
@@ -264,15 +277,46 @@ test("periodic world boss occurrences use one JST base time", () => {
     C.nextPeriodicOccurrences("01:00", 3, jst(2026, 10, 22, 22, 10), 2),
     [jst(2026, 10, 23, 1), jst(2026, 10, 23, 4)],
   );
+  assert.deepEqual(
+    C.nextPeriodicOccurrences("21:13", 6, jst(2026, 10, 22, 22), 3),
+    [jst(2026, 10, 23, 3, 13), jst(2026, 10, 23, 9, 13), jst(2026, 10, 23, 15, 13)],
+  );
 });
 
 test("old saved state is migrated with world boss defaults", () => {
   const state = C.initialState(jst(2026, 10, 22, 16));
   delete state.worldBosses;
   const migrated = C.catchUp(state, jst(2026, 10, 22, 16));
-  assert.equal(migrated.worldBosses.length, 3);
+  assert.equal(migrated.worldBosses.length, 2);
+  assert.equal(migrated.worldBosses[0].name, "魔族/天族");
   assert.equal(migrated.worldBosses[0].bosses[0].baseTime, "09:02");
-  assert.deepEqual(migrated.worldBosses[2].bosses.map((boss) => boss.name), ["監視者カイラ", "守護神将ナフマ", "精霊王アグロ"]);
+  assert.deepEqual(migrated.worldBosses[0].bosses.map((boss) => boss.name), [
+    "不滅のガルトゥア",
+    "軍団長ラグタ",
+    "沈黙のタルタン",
+    "魂の支配者カシャパ",
+  ]);
+  assert.deepEqual(migrated.worldBosses[1].bosses.map((boss) => boss.name), ["監視者カイラ", "守護神将ナフマ", "精霊王アグロ"]);
+});
+
+test("legacy faction categories merge without losing saved boss settings", () => {
+  const state = C.initialState(jst(2026, 10, 22, 16));
+  state.version = 10;
+  state.worldBosses = [
+    {
+      id: "asmodian",
+      name: "魔族大陸",
+      bosses: [{ ...state.worldBosses[0].bosses[0], baseTime: "10:15", notifyMinutes: [60, 10] }],
+    },
+    { id: "elyos", name: "天族大陸", bosses: [] },
+    state.worldBosses[1],
+  ];
+
+  const migrated = C.catchUp(state, jst(2026, 10, 22, 16));
+  assert.equal(migrated.version, 11);
+  assert.deepEqual(migrated.worldBosses.map((category) => category.name), ["魔族/天族", "アビス"]);
+  assert.equal(migrated.worldBosses[0].bosses[0].baseTime, "10:15");
+  assert.deepEqual(migrated.worldBosses[0].bosses[0].notifyMinutes, [60, 10]);
 });
 
 test("old character data is migrated with independent memo defaults", () => {
@@ -310,12 +354,12 @@ test("legacy memo text is escaped while preserving newlines", () => {
 
 test("existing Kaira time survives rename and Nahma is added during migration", () => {
   const state = C.initialState(jst(2026, 10, 22, 16));
-  state.worldBosses[2].bosses = [{ id: "kaira", name: "カイラ", baseTime: "02:30", intervalHours: 3 }];
+  state.worldBosses[1].bosses = [{ id: "kaira", name: "カイラ", baseTime: "02:30", intervalHours: 3 }];
   const migrated = C.catchUp(state, jst(2026, 10, 22, 16));
-  assert.equal(migrated.worldBosses[2].bosses[0].name, "監視者カイラ");
-  assert.equal(migrated.worldBosses[2].bosses[0].baseTime, "02:30");
-  assert.equal(migrated.worldBosses[2].bosses[1].name, "守護神将ナフマ");
-  assert.equal(migrated.worldBosses[2].bosses[2].name, "精霊王アグロ");
+  assert.equal(migrated.worldBosses[1].bosses[0].name, "監視者カイラ");
+  assert.equal(migrated.worldBosses[1].bosses[0].baseTime, "02:30");
+  assert.equal(migrated.worldBosses[1].bosses[1].name, "守護神将ナフマ");
+  assert.equal(migrated.worldBosses[1].bosses[2].name, "精霊王アグロ");
 });
 
 test("saved world boss base time survives migration", () => {
@@ -325,15 +369,32 @@ test("saved world boss base time survives migration", () => {
   assert.equal(migrated.worldBosses[0].bosses[0].baseTime, "10:15");
 });
 
+test("existing world boss settings survive while new bosses are added", () => {
+  const state = C.initialState(jst(2026, 10, 22, 16));
+  state.worldBosses[0].bosses = state.worldBosses[0].bosses.slice(0, 2);
+  state.worldBosses[0].bosses[0].baseTime = "10:15";
+  state.worldBosses[0].bosses[0].notifyMinutes = [60, 10];
+  const migrated = C.catchUp(state, jst(2026, 10, 22, 16));
+
+  assert.equal(migrated.worldBosses[0].bosses[0].baseTime, "10:15");
+  assert.deepEqual(migrated.worldBosses[0].bosses[0].notifyMinutes, [60, 10]);
+  assert.equal(migrated.worldBosses[0].bosses[2].name, "沈黙のタルタン");
+  assert.deepEqual(migrated.worldBosses[0].bosses[2].notifyMinutes, [10, 5]);
+  assert.equal(migrated.worldBosses[0].bosses[3].name, "魂の支配者カシャパ");
+  assert.deepEqual(migrated.worldBosses[0].bosses[3].notifyMinutes, [10, 5]);
+});
+
 test("saved boss notification choices and weekly time survive migration", () => {
   const state = C.initialState(jst(2026, 10, 22, 16));
   state.worldBosses[0].bosses[0].notifyMinutes = [60, 10];
-  state.worldBosses[2].bosses[1].time = "22:15";
-  state.worldBosses[2].bosses[1].notifyMinutes = [50];
+  state.worldBosses[0].bosses[2].notifyMinutes = [];
+  state.worldBosses[1].bosses[1].time = "22:15";
+  state.worldBosses[1].bosses[1].notifyMinutes = [50];
   const migrated = C.catchUp(state, jst(2026, 10, 22, 16));
   assert.deepEqual(migrated.worldBosses[0].bosses[0].notifyMinutes, [60, 10]);
-  assert.equal(migrated.worldBosses[2].bosses[1].time, "22:15");
-  assert.deepEqual(migrated.worldBosses[2].bosses[1].notifyMinutes, [50]);
+  assert.deepEqual(migrated.worldBosses[0].bosses[2].notifyMinutes, []);
+  assert.equal(migrated.worldBosses[1].bosses[1].time, "22:15");
+  assert.deepEqual(migrated.worldBosses[1].bosses[1].notifyMinutes, [50]);
 });
 
 test("saved five-minute notification survives migration", () => {
@@ -350,7 +411,7 @@ test("world boss occurrence dispatcher supports periodic and weekly schedules", 
     [jst(2026, 10, 22, 9, 2), jst(2026, 10, 22, 21, 2)],
   );
   assert.deepEqual(
-    C.worldBossOccurrences(defaults[2].bosses[1], jst(2026, 10, 23, 20, 54), 2),
+    C.worldBossOccurrences(defaults[1].bosses[1], jst(2026, 10, 23, 20, 54), 2),
     [jst(2026, 10, 23, 21), jst(2026, 10, 25, 21)],
   );
 });
@@ -372,10 +433,10 @@ test("displayed app version matches package and Tauri metadata", () => {
   assert.equal(tauri.version, packageVersion);
   assert.match(tauri.app.windows[0].title, new RegExp(`v${packageVersion.replaceAll(".", "\\.")}$`));
   assert.match(html, new RegExp(`v${packageVersion.replaceAll(".", "\\.")}`));
-  assert.equal(C.STATE_VERSION, 9);
+  assert.equal(C.STATE_VERSION, 11);
 });
 
-test("new states track every dashboard task by default", () => {
+test("new states track all tasks for character 1 and the reduced defaults for later characters", () => {
   const state = C.initialState(jst(2026, 10, 26, 16));
   assert.deepEqual(state.shared.tracked, {
     dailyQuests: true,
@@ -401,6 +462,32 @@ test("new states track every dashboard task by default", () => {
     nightmareState: true,
     corridorState: true,
   });
+  for (const character of state.characters.slice(1)) {
+    assert.deepEqual(character.tracked, {
+      farmGiena: false,
+      supplyDaily: false,
+      sanctuary: false,
+      awakening: true,
+      battleground: false,
+      supplyWeekly: false,
+      seasonWeekly: false,
+      odePurchased: true,
+      odeCrafted: true,
+      odeState: true,
+      nightmareState: true,
+      corridorState: true,
+    });
+  }
+  assert.deepEqual(C.makeCharacter("char-5", 4).tracked, state.characters[1].tracked);
+});
+
+test("saved character tracking choices survive the new character defaults", () => {
+  const state = C.initialState(jst(2026, 10, 28, 12));
+  for (const key of Object.keys(state.characters[1].tracked)) state.characters[1].tracked[key] = true;
+  state.characters[1].tracked.awakening = false;
+
+  const migrated = C.catchUp(state, jst(2026, 10, 28, 12));
+  assert.ok(Object.entries(migrated.characters[1].tracked).every(([key, value]) => key === "awakening" ? value === false : value === true));
 });
 
 test("legacy states receive enabled tracking settings without changing progress", () => {
@@ -410,7 +497,7 @@ test("legacy states receive enabled tracking settings without changing progress"
   delete state.shared.tracked;
   delete state.characters[0].tracked;
   const migrated = C.catchUp(state, jst(2026, 10, 26, 16));
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 11);
   assert.equal(migrated.characters[0].farmGiena, 450000);
   assert.ok(Object.values(migrated.shared.tracked).every(Boolean));
   assert.ok(Object.values(migrated.characters[0].tracked).every(Boolean));
@@ -484,11 +571,60 @@ test("priority settings migrate with defaults and preserve valid saved choices",
   state.characters[1].priorities.farmGiena = "urgent";
   state.characters[1].priorities.odeHigh = "invalid";
   const migrated = C.catchUp(state, jst(2026, 10, 26, 16));
-  assert.equal(migrated.version, 9);
+  assert.equal(migrated.version, 11);
   assert.deepEqual(migrated.shared.priorities, C.SHARED_PRIORITY_DEFAULTS);
   assert.deepEqual(migrated.characters[0].priorities, C.CHARACTER_PRIORITY_DEFAULTS);
   assert.equal(migrated.characters[1].priorities.farmGiena, "urgent");
   assert.equal(migrated.characters[1].priorities.odeHigh, "urgent");
+});
+
+test("new users receive the curated priority defaults", () => {
+  const state = C.initialState(jst(2026, 10, 28, 2));
+  assert.deepEqual(state.shared.priorities, {
+    dailyQuests: "urgent",
+    shugo: "normal",
+    invasionKeys: "normal",
+    dailyDungeon: "high",
+    weeklyDemonic: "high",
+    weeklyAbyss: "high",
+    serverOdeCrafted: "high",
+    afResult: "urgent",
+  });
+  assert.deepEqual(state.characters[0].priorities, {
+    farmGiena: "normal",
+    supplyDaily: "normal",
+    sanctuary: "normal",
+    awakening: "high",
+    battleground: "normal",
+    supplyWeekly: "normal",
+    seasonWeekly: "normal",
+    odePurchased: "high",
+    odeCrafted: "high",
+    odeLow: "low",
+    odeHigh: "urgent",
+    nightmareLow: "normal",
+    nightmareHigh: "high",
+    corridor: "urgent",
+  });
+});
+
+test("saved priorities from existing users are not replaced by curated defaults", () => {
+  const state = C.initialState(jst(2026, 10, 28, 2));
+  state.version = 9;
+  state.shared.priorities.dailyQuests = "normal";
+  state.shared.priorities.dailyDungeon = "low";
+  state.shared.priorities.afResult = "high";
+  state.characters[0].priorities.awakening = "normal";
+  state.characters[0].priorities.odePurchased = "low";
+  state.characters[0].priorities.odeCrafted = "urgent";
+
+  const migrated = C.catchUp(state, jst(2026, 10, 28, 2));
+  assert.equal(migrated.shared.priorities.dailyQuests, "normal");
+  assert.equal(migrated.shared.priorities.dailyDungeon, "low");
+  assert.equal(migrated.shared.priorities.afResult, "high");
+  assert.equal(migrated.characters[0].priorities.awakening, "normal");
+  assert.equal(migrated.characters[0].priorities.odePurchased, "low");
+  assert.equal(migrated.characters[0].priorities.odeCrafted, "urgent");
 });
 
 test("priority candidates exclude completed and star-disabled tasks", () => {
@@ -505,6 +641,13 @@ test("priority candidates exclude completed and star-disabled tasks", () => {
   assert.equal(all.some((item) => item.id === "char-1-farmGiena"), false);
   assert.equal(all.some((item) => item.id === "char-1-supplyDaily"), false);
   assert.equal(all.some((item) => item.id === "char-1-sanctuary"), true);
+});
+
+test("season mission uses the generic incomplete status", () => {
+  const state = C.initialState(jst(2026, 10, 28, 1));
+  const item = C.priorityCandidates(state, jst(2026, 10, 28, 1)).all
+    .find((candidate) => candidate.key === "seasonWeekly");
+  assert.equal(item.status, "未完了");
 });
 
 test("ode and nightmare use exactly one threshold-specific priority at a time", () => {
@@ -559,6 +702,7 @@ test("top five prioritizes urgent and high states while normal and low states on
   state.characters[0].nightmare = 9;
   state.characters[0].abyssGranted = 1;
   state.characters[0].priorities.sanctuary = "urgent";
+  state.shared.afResultPending = false;
   state.shared.priorities.dailyQuests = "high";
   const result = C.priorityCandidates(state, now);
   assert.equal(result.top.length, 5);

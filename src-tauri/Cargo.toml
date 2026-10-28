@@ -1,6 +1,6 @@
 [package]
 name = "a2-routine-boss-tracker"
-version = "0.2.33"
+version = "0.2.37"
 description = "AION2の日課・週課・ボス管理ツール"
 authors = ["A2 ルーティン&ボストラッカー contributors"]
 license = "MIT"

@@ -13,7 +13,7 @@
   ];
   let state = C.initialState();
   let selectedCharacter = state.characters[0].id;
-  let selectedBossCategory = "asmodian";
+  let selectedBossCategory = "faction";
   let nativeSaveTimer = null;
   let startupError = "";
   let memoSelection = null;
@@ -239,7 +239,7 @@
       if (tracked.awakening !== false && character.awakening !== 0) weekly.push({ group: "キャラクター", label: "覚醒戦", status: `残り${character.awakening}回`, preview: `${character.name}：覚醒戦`, view: "characters", id: character.id, character: character.name });
       if (tracked.battleground !== false && character.battleground < 3) weekly.push({ group: "キャラクター", label: "戦場", status: `${character.battleground} / 3`, preview: `${character.name}：戦場`, view: "characters", id: character.id, character: character.name });
       if (tracked.supplyWeekly !== false && !character.supplyWeekly) weekly.push({ group: "キャラクター", label: "補給依頼（週）", status: "内容未確認", preview: `${character.name}：補給依頼（週）`, view: "characters", id: character.id, character: character.name });
-      if (tracked.seasonWeekly !== false && !character.seasonWeekly) weekly.push({ group: "キャラクター", label: "シーズンミッション（週）", status: "未購入", preview: `${character.name}：シーズンミッション`, view: "characters", id: character.id, character: character.name });
+      if (tracked.seasonWeekly !== false && !character.seasonWeekly) weekly.push({ group: "キャラクター", label: "シーズンミッション（週）", status: "未完了", preview: `${character.name}：シーズンミッション`, view: "characters", id: character.id, character: character.name });
       if (tracked.odePurchased !== false && character.odePurchased < 20) weekly.push({ group: "キャラクター", label: "オードショップ購入", status: `${character.odePurchased} / 20`, preview: `${character.name}：オードショップ購入`, view: "characters", id: character.id, character: character.name });
       if (tracked.odeCrafted !== false && character.odeCrafted < 4) weekly.push({ group: "キャラクター", label: "オード物質変換（キャラ）", status: `${character.odeCrafted} / 4`, preview: `${character.name}：オード物質変換`, view: "characters", id: character.id, character: character.name });
       if (tracked.odeState !== false && character.odeNatural >= C.ODE_ALERT_THRESHOLD) ode.push({ group: "警告対象", label: character.name, status: `${character.odeNatural} / 840`, preview: `${character.name} ${character.odeNatural}/840`, view: "characters", id: character.id });
@@ -538,7 +538,7 @@
             <div class="boss-notification-setting"><div><strong>Windows通知</strong><span>アプリ起動中（トレイ格納中を含む）</span></div><div class="toggle-group">${bossNotificationChips(boss)}</div></div>
             <div class="boss-upcoming"><span>今後のPOP</span><ol>${occurrences.map((time, index) => `<li><b>${index + 1}</b><time>${formatJst(time)}</time></li>`).join("")}</ol></div>
           </article>`;
-        }).join("") : `<div class="card empty boss-empty"><div><strong>登録済みボスはありません</strong><p>天族大陸のボスは、次の段階で追加できます。</p></div></div>`}
+        }).join("") : `<div class="card empty boss-empty"><div><strong>登録済みボスはありません</strong></div></div>`}
       </div>
       <div class="card panel boss-note"><strong>POP時刻と通知について</strong><p>周期ボスは24時間形式で1回分の基準時刻を登録します。曜日指定ボスは固定曜日と編集可能な出現時刻から計算します。通知はボスごとに複数選択できます。</p></div>`;
   }
