@@ -45,12 +45,16 @@ test("weekly reset replenishes charge-based content", () => {
   const start = jst(2026, 10, 14, 16);
   const state = C.initialState(start);
   state.shared.dailyDungeon = 3;
+  state.shared.serverOdePurchased = 16;
   state.characters[0].sanctuary = 0;
   state.characters[0].awakening = 1;
+  state.characters[0].odePurchased = 4;
   const result = C.catchUp(state, jst(2026, 10, 21, 16));
   assert.equal(result.shared.dailyDungeon, 14);
+  assert.equal(result.shared.serverOdePurchased, 0);
   assert.equal(result.characters[0].sanctuary, 2);
   assert.equal(result.characters[0].awakening, 3);
+  assert.equal(result.characters[0].odePurchased, 0);
 });
 
 test("weekly mission counts are independently capped at 12 for Asmodian and 20 for Abyss", () => {
@@ -63,13 +67,45 @@ test("weekly mission counts are independently capped at 12 for Asmodian and 20 f
   assert.equal(result.shared.weeklyDemonic + result.shared.weeklyAbyss, 32);
 });
 
+test("v0.2.37 ode purchases split once into shared 16 and per-character 4", () => {
+  const now = jst(2026, 10, 29, 2);
+  const state = C.initialState(now);
+  state.version = 11;
+  delete state.shared.serverOdePurchased;
+  state.characters[0].odePurchased = 20;
+  state.characters[1].odePurchased = 18;
+  state.characters[2].odePurchased = 10;
+  state.characters[3].odePurchased = 0;
+
+  const migrated = C.catchUp(state, now);
+  assert.equal(migrated.version, 12);
+  assert.equal(migrated.shared.serverOdePurchased, 16);
+  assert.deepEqual(migrated.characters.map((character) => character.odePurchased), [4, 2, 0, 0]);
+  assert.equal(migrated.shared.tracked.serverOdePurchased, true);
+  assert.equal(migrated.shared.priorities.serverOdePurchased, "high");
+
+  const repeated = C.catchUp(migrated, now);
+  assert.equal(repeated.shared.serverOdePurchased, 16);
+  assert.deepEqual(repeated.characters.map((character) => character.odePurchased), [4, 2, 0, 0]);
+});
+
+test("current ode purchase values are clamped to shared 16 and per-character 4", () => {
+  const now = jst(2026, 10, 29, 2);
+  const state = C.initialState(now);
+  state.shared.serverOdePurchased = 30;
+  state.characters[0].odePurchased = 20;
+  const normalized = C.catchUp(state, now);
+  assert.equal(normalized.shared.serverOdePurchased, 16);
+  assert.equal(normalized.characters[0].odePurchased, 4);
+});
+
 test("known v1 Abyss value clipped to 8 is restored to 20 once", () => {
   const state = C.initialState(jst(2026, 10, 21, 16));
   state.version = 1;
   state.shared.weeklyDemonic = 12;
   state.shared.weeklyAbyss = 8;
   const result = C.catchUp(state, jst(2026, 10, 21, 16));
-  assert.equal(result.version, 11);
+  assert.equal(result.version, 12);
   assert.equal(result.shared.weeklyDemonic, 12);
   assert.equal(result.shared.weeklyAbyss, 20);
 });
@@ -81,7 +117,7 @@ test("legacy reward-decay counters are removed during state migration", () => {
   state.shared.conquest = 80;
   state.shared.transcendence = 60;
   const result = C.catchUp(state, jst(2026, 10, 21, 16));
-  assert.equal(result.version, 11);
+  assert.equal(result.version, 12);
   assert.equal("exploration" in result.shared, false);
   assert.equal("conquest" in result.shared, false);
   assert.equal("transcendence" in result.shared, false);
@@ -164,7 +200,7 @@ test("legacy state receives recurring event defaults without changing valid prog
   state.shared.weeklyAbyss = 8;
   delete state.recurringEvents;
   const migrated = C.catchUp(state, jst(2026, 10, 26, 7));
-  assert.equal(migrated.version, 11);
+  assert.equal(migrated.version, 12);
   assert.equal(migrated.shared.weeklyAbyss, 8, "v3 progress must not repeat the old 8-to-20 repair");
   assert.deepEqual(migrated.recurringEvents.map((event) => event.name), ["シューゴフェスタ", "次元侵攻", "時空の裂け目"]);
 });
@@ -313,7 +349,7 @@ test("legacy faction categories merge without losing saved boss settings", () =>
   ];
 
   const migrated = C.catchUp(state, jst(2026, 10, 22, 16));
-  assert.equal(migrated.version, 11);
+  assert.equal(migrated.version, 12);
   assert.deepEqual(migrated.worldBosses.map((category) => category.name), ["魔族/天族", "アビス"]);
   assert.equal(migrated.worldBosses[0].bosses[0].baseTime, "10:15");
   assert.deepEqual(migrated.worldBosses[0].bosses[0].notifyMinutes, [60, 10]);
@@ -433,7 +469,7 @@ test("displayed app version matches package and Tauri metadata", () => {
   assert.equal(tauri.version, packageVersion);
   assert.match(tauri.app.windows[0].title, new RegExp(`v${packageVersion.replaceAll(".", "\\.")}$`));
   assert.match(html, new RegExp(`v${packageVersion.replaceAll(".", "\\.")}`));
-  assert.equal(C.STATE_VERSION, 11);
+  assert.equal(C.STATE_VERSION, 12);
 });
 
 test("new states track all tasks for character 1 and the reduced defaults for later characters", () => {
@@ -445,6 +481,7 @@ test("new states track all tasks for character 1 and the reduced defaults for la
     dailyDungeon: true,
     weeklyDemonic: true,
     weeklyAbyss: true,
+    serverOdePurchased: true,
     serverOdeCrafted: true,
     afResult: true,
   });
@@ -497,7 +534,7 @@ test("legacy states receive enabled tracking settings without changing progress"
   delete state.shared.tracked;
   delete state.characters[0].tracked;
   const migrated = C.catchUp(state, jst(2026, 10, 26, 16));
-  assert.equal(migrated.version, 11);
+  assert.equal(migrated.version, 12);
   assert.equal(migrated.characters[0].farmGiena, 450000);
   assert.ok(Object.values(migrated.shared.tracked).every(Boolean));
   assert.ok(Object.values(migrated.characters[0].tracked).every(Boolean));
@@ -548,6 +585,7 @@ test("all six previously missing task rows are independent priority candidates",
   assert.ok(ids.includes("shared-invasionKeys"));
   assert.ok(ids.includes("shared-weeklyDemonic"));
   assert.ok(ids.includes("shared-weeklyAbyss"));
+  assert.ok(ids.includes("shared-serverOdePurchased"));
   assert.ok(ids.includes("char-1-odePurchased"));
   assert.ok(ids.includes("char-1-odeCrafted"));
 
@@ -571,7 +609,7 @@ test("priority settings migrate with defaults and preserve valid saved choices",
   state.characters[1].priorities.farmGiena = "urgent";
   state.characters[1].priorities.odeHigh = "invalid";
   const migrated = C.catchUp(state, jst(2026, 10, 26, 16));
-  assert.equal(migrated.version, 11);
+  assert.equal(migrated.version, 12);
   assert.deepEqual(migrated.shared.priorities, C.SHARED_PRIORITY_DEFAULTS);
   assert.deepEqual(migrated.characters[0].priorities, C.CHARACTER_PRIORITY_DEFAULTS);
   assert.equal(migrated.characters[1].priorities.farmGiena, "urgent");
@@ -587,6 +625,7 @@ test("new users receive the curated priority defaults", () => {
     dailyDungeon: "high",
     weeklyDemonic: "high",
     weeklyAbyss: "high",
+    serverOdePurchased: "high",
     serverOdeCrafted: "high",
     afResult: "urgent",
   });

@@ -229,6 +229,7 @@
     if (sharedTracked.dailyDungeon !== false && state.shared.dailyDungeon > 0) weekly.push({ group: "アカウント共有", label: "デイリーダンジョン", status: `残り${state.shared.dailyDungeon}回`, view: "shared" });
     if (sharedTracked.weeklyDemonic !== false && state.shared.weeklyDemonic < 12) weekly.push({ group: "アカウント共有", label: "魔族大陸の任務", status: `${state.shared.weeklyDemonic} / 12`, view: "shared" });
     if (sharedTracked.weeklyAbyss !== false && state.shared.weeklyAbyss < 20) weekly.push({ group: "アカウント共有", label: "アビスの任務", status: `${state.shared.weeklyAbyss} / 20`, view: "shared" });
+    if (sharedTracked.serverOdePurchased !== false && state.shared.serverOdePurchased < 16) weekly.push({ group: "アカウント共有", label: "オードショップ購入（サーバー）", status: `${state.shared.serverOdePurchased} / 16`, view: "shared" });
     if (sharedTracked.serverOdeCrafted !== false && state.shared.serverOdeCrafted < 16) weekly.push({ group: "アカウント共有", label: "オード物質変換（サーバー）", status: `${state.shared.serverOdeCrafted} / 16`, view: "shared" });
     if (sharedTracked.afResult !== false && state.shared.afResultPending) weekly.push({ group: "アカウント共有", label: "AF結果", status: "未入力", view: "shared" });
     for (const character of chars) {
@@ -240,7 +241,7 @@
       if (tracked.battleground !== false && character.battleground < 3) weekly.push({ group: "キャラクター", label: "戦場", status: `${character.battleground} / 3`, preview: `${character.name}：戦場`, view: "characters", id: character.id, character: character.name });
       if (tracked.supplyWeekly !== false && !character.supplyWeekly) weekly.push({ group: "キャラクター", label: "補給依頼（週）", status: "内容未確認", preview: `${character.name}：補給依頼（週）`, view: "characters", id: character.id, character: character.name });
       if (tracked.seasonWeekly !== false && !character.seasonWeekly) weekly.push({ group: "キャラクター", label: "シーズンミッション（週）", status: "未完了", preview: `${character.name}：シーズンミッション`, view: "characters", id: character.id, character: character.name });
-      if (tracked.odePurchased !== false && character.odePurchased < 20) weekly.push({ group: "キャラクター", label: "オードショップ購入", status: `${character.odePurchased} / 20`, preview: `${character.name}：オードショップ購入`, view: "characters", id: character.id, character: character.name });
+      if (tracked.odePurchased !== false && character.odePurchased < 4) weekly.push({ group: "キャラクター", label: "オードショップ購入（キャラ）", status: `${character.odePurchased} / 4`, preview: `${character.name}：オードショップ購入`, view: "characters", id: character.id, character: character.name });
       if (tracked.odeCrafted !== false && character.odeCrafted < 4) weekly.push({ group: "キャラクター", label: "オード物質変換（キャラ）", status: `${character.odeCrafted} / 4`, preview: `${character.name}：オード物質変換`, view: "characters", id: character.id, character: character.name });
       if (tracked.odeState !== false && character.odeNatural >= C.ODE_ALERT_THRESHOLD) ode.push({ group: "警告対象", label: character.name, status: `${character.odeNatural} / 840`, preview: `${character.name} ${character.odeNatural}/840`, view: "characters", id: character.id });
       const remaining = Math.max(0, character.abyssGranted - character.abyssUsed);
@@ -287,12 +288,12 @@
     const sharedRows = [
       ["dailyQuests", "デイリークエスト"], ["shugo", "シューゴフェスタ"], ["invasionKeys", "次元侵攻の鍵"],
       ["dailyDungeon", "デイリーダンジョン"], ["weeklyDemonic", "魔族大陸の任務"],
-      ["weeklyAbyss", "アビスの任務"], ["serverOdeCrafted", "オード物質変換（サーバー）"], ["afResult", "AF結果入力"],
+      ["weeklyAbyss", "アビスの任務"], ["serverOdePurchased", "オードショップ購入（サーバー）"], ["serverOdeCrafted", "オード物質変換（サーバー）"], ["afResult", "AF結果入力"],
     ].filter(([key]) => state.shared.tracked?.[key] !== false);
     const characterRows = character ? [
       ["farmGiena", "フィールドファーム"], ["supplyDaily", "補給依頼（日）"], ["sanctuary", "ルドラ"],
       ["awakening", "覚醒戦"], ["battleground", "戦場"], ["supplyWeekly", "補給依頼（週）"], ["seasonWeekly", "シーズンミッション（週）"],
-      ["odePurchased", "オードショップ購入"], ["odeCrafted", "オード物質変換（キャラ）"],
+      ["odePurchased", "オードショップ購入（キャラ）"], ["odeCrafted", "オード物質変換（キャラ）"],
     ].filter(([key]) => character.tracked?.[key] !== false) : [];
     const characterIndex = character ? state.characters.indexOf(character) : -1;
     const stateRows = character ? [
@@ -337,7 +338,7 @@
       + ["dailyQuests", "shugo", "invasionKeys"].filter((key) => sharedTracked[key] !== false).length;
     const dailyDone = dailyTotal - summaries.daily.length;
     const weeklyTotal = completions.reduce((sum, value) => sum + value.weeklyTotal, 0)
-      + ["dailyDungeon", "weeklyDemonic", "weeklyAbyss", "serverOdeCrafted", "afResult"].filter((key) => sharedTracked[key] !== false).length;
+      + ["dailyDungeon", "weeklyDemonic", "weeklyAbyss", "serverOdePurchased", "serverOdeCrafted", "afResult"].filter((key) => sharedTracked[key] !== false).length;
     const weeklyDone = weeklyTotal - summaries.weekly.length;
     const highOde = summaries.ode.length;
     const managedOdeCount = chars.filter((c) => c.tracked?.odeState !== false).length;
@@ -369,7 +370,7 @@
           const warnings = C.characterAlerts(c);
           const dailyStatus = cp.dailyTotal ? `${cp.dailyDone}/${cp.dailyTotal}${progress(cp.dailyDone, cp.dailyTotal)}` : `<span class="subtext">対象なし</span>`;
           const weeklyStatus = cp.weeklyTotal ? `${cp.weeklyDone}/${cp.weeklyTotal}${progress(cp.weeklyDone, cp.weeklyTotal)}` : `<span class="subtext">対象なし</span>`;
-          return `<tr data-action="select-character" data-id="${c.id}"><td><div class="character-name">${esc(c.name)}</div><div class="subtext">${c.id}</div></td><td><strong>${c.odeNatural + c.odeBonus}</strong><div class="subtext">自然 ${c.odeNatural}/840</div></td><td>${dailyStatus}</td><td>${weeklyStatus}</td><td>${c.sanctuary}/2</td><td>${corridor ? pill(`${corridor}回`, "warn") : pill("0回", "good")}</td><td>${c.odePurchased}/20</td><td>${alertSummary(warnings)}</td></tr>`;
+          return `<tr data-action="select-character" data-id="${c.id}"><td><div class="character-name">${esc(c.name)}</div><div class="subtext">${c.id}</div></td><td><strong>${c.odeNatural + c.odeBonus}</strong><div class="subtext">自然 ${c.odeNatural}/840</div></td><td>${dailyStatus}</td><td>${weeklyStatus}</td><td>${c.sanctuary}/2</td><td>${corridor ? pill(`${corridor}回`, "warn") : pill("0回", "good")}</td><td>${c.odePurchased}/4</td><td>${alertSummary(warnings)}</td></tr>`;
         }).join("")}
       </tbody></table></div>
       ${prioritySettingsOpen ? renderPrioritySettings(chars) : ""}`;
@@ -389,6 +390,7 @@
           ${managedCounter("デイリーダンジョン残数", state.shared.dailyDungeon, 14, "shared.dailyDungeon", "shared.tracked.dailyDungeon")}
           ${managedCounter("魔族大陸の任務", state.shared.weeklyDemonic, 12, "shared.weeklyDemonic", "shared.tracked.weeklyDemonic")}
           ${managedCounter("アビスの任務", state.shared.weeklyAbyss, 20, "shared.weeklyAbyss", "shared.tracked.weeklyAbyss", 1, `合計 ${weeklyTotal}/32`)}
+          ${managedCounter("オードショップ購入（サーバー）", state.shared.serverOdePurchased, 16, "shared.serverOdePurchased", "shared.tracked.serverOdePurchased")}
           ${managedCounter("オード物質変換（サーバー）", state.shared.serverOdeCrafted, 16, "shared.serverOdeCrafted", "shared.tracked.serverOdeCrafted")}
         </article>
       </div>
@@ -459,7 +461,7 @@
           <div class="counter-row"><div><strong>消費</strong><div class="subtext">自然回復分→追加分の順</div></div><div class="counter-control"><button class="btn small" data-action="spend-ode" data-id="${current.id}" data-amount="40" ${odeTotal < 40 ? "disabled" : ""}>40消費</button><button class="btn small" data-action="spend-ode" data-id="${current.id}" data-amount="80" ${odeTotal < 80 ? "disabled" : ""}>80消費</button></div></div>
         </article>
         <article class="card panel"><h3>週次入手枠</h3>
-          ${managedCounter("オードショップ購入", current.odePurchased, 20, `${prefix}.odePurchased`, `${prefix}.tracked.odePurchased`)}
+          ${managedCounter("オードショップ購入（キャラ）", current.odePurchased, 4, `${prefix}.odePurchased`, `${prefix}.tracked.odePurchased`)}
           ${managedCounter("オード物質変換（キャラ）", current.odeCrafted, 4, `${prefix}.odeCrafted`, `${prefix}.tracked.odeCrafted`)}
           <div class="counter-row"><div><strong>合計エネルギー</strong></div><strong>${(current.odeNatural + current.odeBonus).toLocaleString()}</strong></div>
         </article>

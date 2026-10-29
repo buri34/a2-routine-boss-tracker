@@ -119,8 +119,15 @@ assert.equal(await evaluate(`document.querySelector(${JSON.stringify(naturalSele
 assert.equal(await evaluate(`document.querySelector(${JSON.stringify(bonusSelector)}).max`), "2000");
 assert.ok(await evaluate(`document.querySelector('.managed-toggle[data-path="characters.0.tracked.odePurchased"]') !== null`));
 assert.ok(await evaluate(`document.querySelector('.managed-toggle[data-path="characters.0.tracked.odeCrafted"]') !== null`));
-assert.ok(await evaluate(`document.body.textContent.includes("オードショップ購入")`));
+assert.ok(await evaluate(`document.body.textContent.includes("オードショップ購入（キャラ）")`));
 assert.ok(await evaluate(`document.body.textContent.includes("オード物質変換（キャラ）")`));
+const characterOdePurchaseSelector = '.counter-input[data-path="characters.0.odePurchased"]';
+assert.equal(await evaluate(`document.querySelector(${JSON.stringify(characterOdePurchaseSelector)}).max`), "4");
+await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(characterOdePurchaseSelector)}); input.value = "5"; input.dispatchEvent(new Event("change", { bubbles: true })); })()`);
+await new Promise((resolve) => setTimeout(resolve, 150));
+assert.equal(await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).characters[0].odePurchased`), 4);
+await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(characterOdePurchaseSelector)}); input.value = "0"; input.dispatchEvent(new Event("change", { bubbles: true })); })()`);
+await new Promise((resolve) => setTimeout(resolve, 150));
 
 await evaluate(`document.querySelector('.char-tab[data-id="char-2"]').click()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
@@ -145,6 +152,7 @@ assert.equal(await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1"))
 await command("Page.navigate", { url: "http://127.0.0.1:8772/?view=shared" });
 await new Promise((resolve) => setTimeout(resolve, 300));
 assert.equal(await evaluate(`document.querySelector('.brand strong').textContent`), "A2 ルーティン&ボストラッカー");
+assert.ok(await evaluate(`document.body.textContent.includes("オードショップ購入（サーバー）")`));
 assert.ok(await evaluate(`document.body.textContent.includes("オード物質変換（サーバー）")`));
 assert.equal(await evaluate(`document.body.textContent.includes("オード物質変換（共有）")`), false);
 assert.ok(await evaluate(`document.body.textContent.includes("次元侵攻の鍵")`));
@@ -159,9 +167,10 @@ assert.equal(await evaluate(`document.body.textContent.includes("報酬減衰")`
 assert.equal(await evaluate(`document.body.textContent.includes("探検")`), false);
 assert.equal(await evaluate(`document.body.textContent.includes("征服")`), false);
 assert.equal(await evaluate(`document.body.textContent.includes("超越")`), false);
-assert.equal(await evaluate(`document.querySelectorAll('.managed-toggle').length`), 8);
+assert.equal(await evaluate(`document.querySelectorAll('.managed-toggle').length`), 9);
 const demonicSelector = '.counter-input[data-path="shared.weeklyDemonic"]';
 const abyssSelector = '.counter-input[data-path="shared.weeklyAbyss"]';
+const serverOdePurchaseSelector = '.counter-input[data-path="shared.serverOdePurchased"]';
 const demonicManagedSelector = '.managed-toggle[data-path="shared.tracked.weeklyDemonic"]';
 await evaluate(`document.querySelector(${JSON.stringify(demonicManagedSelector)}).click()`);
 await new Promise((resolve) => setTimeout(resolve, 150));
@@ -175,6 +184,12 @@ assert.ok(await evaluate(`document.querySelector('.managed-toggle[data-path="sha
 assert.ok(await evaluate(`document.querySelector('.managed-toggle[data-path="shared.tracked.invasionKeys"]') !== null`));
 assert.equal(await evaluate(`document.querySelector(${JSON.stringify(demonicSelector)}).max`), "12");
 assert.equal(await evaluate(`document.querySelector(${JSON.stringify(abyssSelector)}).max`), "20");
+assert.equal(await evaluate(`document.querySelector(${JSON.stringify(serverOdePurchaseSelector)}).max`), "16");
+await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(serverOdePurchaseSelector)}); input.value = "17"; input.dispatchEvent(new Event("change", { bubbles: true })); })()`);
+await new Promise((resolve) => setTimeout(resolve, 150));
+assert.equal(await evaluate(`JSON.parse(localStorage.getItem("aion2-helper-v1")).shared.serverOdePurchased`), 16);
+await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(serverOdePurchaseSelector)}); input.value = "0"; input.dispatchEvent(new Event("change", { bubbles: true })); })()`);
+await new Promise((resolve) => setTimeout(resolve, 150));
 await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(demonicSelector)}); input.value = "12"; input.dispatchEvent(new Event("change", { bubbles: true })); })()`);
 await new Promise((resolve) => setTimeout(resolve, 100));
 await evaluate(`(() => { const input = document.querySelector(${JSON.stringify(abyssSelector)}); input.value = "20"; input.dispatchEvent(new Event("change", { bubbles: true })); })()`);
@@ -227,7 +242,7 @@ assert.equal(
 assert.equal(await evaluate(`document.body.textContent.includes("補給要請")`), false);
 assert.equal(await evaluate(`document.body.textContent.includes("シーズン任務")`), false);
 assert.equal(await evaluate(`document.querySelector('.summary-card[data-summary="daily"] .metric-value').textContent`), "0 / 4");
-assert.equal(await evaluate(`document.querySelector('.summary-card[data-summary="weekly"] .metric-value').textContent`), "2 / 21");
+assert.equal(await evaluate(`document.querySelector('.summary-card[data-summary="weekly"] .metric-value').textContent`), "2 / 22");
 assert.equal(await evaluate(`document.body.textContent.includes("未購入")`), false);
 assert.equal(await evaluate(`document.querySelectorAll('[data-path="shared.exploration"], [data-path="shared.conquest"], [data-path="shared.transcendence"]').length`), 0);
 assert.equal(await evaluate(`document.querySelectorAll('.next-action-row').length`), 5);
@@ -240,11 +255,12 @@ assert.equal(await evaluate(`document.querySelector('.priority-modal').getAttrib
 assert.equal(await evaluate(`document.querySelector('.priority-modal').getAttribute('aria-modal')`), "true");
 assert.equal(await evaluate(`getComputedStyle(document.querySelector('.priority-modal-backdrop')).position`), "fixed");
 assert.equal(await evaluate(`document.querySelector('[data-action="export-priorities"]') === null`), true);
-assert.ok(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オードショップ購入")`));
+assert.ok(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オードショップ購入（サーバー）")`));
+assert.ok(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オードショップ購入（キャラ）")`));
 assert.ok(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オード物質変換（キャラ）")`));
 assert.ok(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オード物質変換（サーバー）")`));
 assert.equal(await evaluate(`document.querySelector('.priority-modal').textContent.includes("オード物質変換（共有）")`), false);
-assert.equal(await evaluate(`document.querySelectorAll('.priority-settings-section:first-of-type .priority-setting-row').length`), 8);
+assert.equal(await evaluate(`document.querySelectorAll('.priority-settings-section:first-of-type .priority-setting-row').length`), 9);
 assert.equal(await evaluate(`document.querySelectorAll('.priority-settings-columns > div:first-child .priority-setting-row').length`), 8);
 assert.equal(await evaluate(`document.querySelectorAll('.priority-settings-columns > div:last-child .priority-setting-row').length`), 5);
 assert.equal(await evaluate(`document.querySelector('.priority-settings [data-path="shared.priorities.weeklyMissions"]') === null`), true);
@@ -252,6 +268,7 @@ assert.equal(await evaluate(`document.querySelector('.priority-settings [data-pa
 const dailyQuestUrgentSelector = '.priority-choice[data-path="shared.priorities.dailyQuests"][data-priority="urgent"]';
 assert.equal(await evaluate(`document.querySelector(${JSON.stringify(dailyQuestUrgentSelector)}).getAttribute("aria-pressed")`), "true");
 assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="shared.priorities.dailyDungeon"][data-priority="high"]').getAttribute("aria-pressed")`), "true");
+assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="shared.priorities.serverOdePurchased"][data-priority="high"]').getAttribute("aria-pressed")`), "true");
 assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="shared.priorities.afResult"][data-priority="urgent"]').getAttribute("aria-pressed")`), "true");
 assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="characters.0.priorities.awakening"][data-priority="high"]').getAttribute("aria-pressed")`), "true");
 assert.equal(await evaluate(`document.querySelector('.priority-choice[data-path="characters.0.priorities.odePurchased"][data-priority="high"]').getAttribute("aria-pressed")`), "true");

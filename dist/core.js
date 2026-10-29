@@ -7,7 +7,7 @@
 
   const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const STATE_VERSION = 11;
+  const STATE_VERSION = 12;
   const ODE_ALERT_THRESHOLD = 720;
   const PRIORITY_LEVELS = ["urgent", "high", "normal", "low"];
   const PRIORITY_LABELS = { urgent: "最優先", high: "高", normal: "通常", low: "低" };
@@ -18,6 +18,7 @@
     dailyDungeon: "high",
     weeklyDemonic: "high",
     weeklyAbyss: "high",
+    serverOdePurchased: "high",
     serverOdeCrafted: "high",
     afResult: "urgent",
   };
@@ -180,6 +181,23 @@
     delete state.shared.conquest;
     delete state.shared.transcendence;
     state.version = STATE_VERSION;
+    return state;
+  }
+
+  function migrateOdePurchaseLimits(state) {
+    state.shared ||= {};
+    const characters = Array.isArray(state.characters) ? state.characters : [];
+    const priorVersion = Number(state.version) || 1;
+    if (priorVersion < 12) {
+      const legacyValues = characters.map((character) => clamp(character.odePurchased, 0, 20));
+      state.shared.serverOdePurchased = clamp(Math.max(0, ...legacyValues), 0, 16);
+      characters.forEach((character, index) => {
+        character.odePurchased = clamp(legacyValues[index] - 16, 0, 4);
+      });
+      return state;
+    }
+    state.shared.serverOdePurchased = clamp(state.shared.serverOdePurchased, 0, 16);
+    for (const character of characters) character.odePurchased = clamp(character.odePurchased, 0, 4);
     return state;
   }
 
@@ -388,6 +406,7 @@
         dailyDungeon: 14,
         weeklyDemonic: 0,
         weeklyAbyss: 0,
+        serverOdePurchased: 0,
         serverOdeCrafted: 0,
         afResultPending: true,
         tracked: {
@@ -397,6 +416,7 @@
           dailyDungeon: true,
           weeklyDemonic: true,
           weeklyAbyss: true,
+          serverOdePurchased: true,
           serverOdeCrafted: true,
           afResult: true,
         },
@@ -436,6 +456,7 @@
     state.shared.dailyDungeon = 14;
     state.shared.weeklyDemonic = 0;
     state.shared.weeklyAbyss = 0;
+    state.shared.serverOdePurchased = 0;
     state.shared.serverOdeCrafted = 0;
     for (const character of state.characters) {
       character.sanctuary = 2;
@@ -565,8 +586,9 @@
     addShared("dailyDungeon", "デイリーダンジョン", `残り${state.shared.dailyDungeon}回`, state.shared.dailyDungeon <= 0, "weekly", weeklyDeadline, 3);
     addShared("weeklyDemonic", "魔族大陸の任務", `${state.shared.weeklyDemonic} / 12`, state.shared.weeklyDemonic >= 12, "weekly", weeklyDeadline, 4);
     addShared("weeklyAbyss", "アビスの任務", `${state.shared.weeklyAbyss} / 20`, state.shared.weeklyAbyss >= 20, "weekly", weeklyDeadline, 5);
-    addShared("serverOdeCrafted", "オード物質変換（サーバー）", `${state.shared.serverOdeCrafted} / 16`, state.shared.serverOdeCrafted >= 16, "weekly", weeklyDeadline, 6);
-    addShared("afResult", "AF結果入力", state.shared.afResultPending ? "未入力" : "入力済み", !state.shared.afResultPending, "weekly", afDeadline, 7);
+    addShared("serverOdePurchased", "オードショップ購入（サーバー）", `${state.shared.serverOdePurchased} / 16`, state.shared.serverOdePurchased >= 16, "weekly", weeklyDeadline, 6);
+    addShared("serverOdeCrafted", "オード物質変換（サーバー）", `${state.shared.serverOdeCrafted} / 16`, state.shared.serverOdeCrafted >= 16, "weekly", weeklyDeadline, 7);
+    addShared("afResult", "AF結果入力", state.shared.afResultPending ? "未入力" : "入力済み", !state.shared.afResultPending, "weekly", afDeadline, 8);
 
     (Array.isArray(state.characters) ? state.characters : []).forEach((character, characterIndex) => {
       if (!character.enabled) return;
@@ -583,7 +605,7 @@
       addTask("battleground", "戦場", `${character.battleground} / 3`, character.battleground >= 3, "weekly", weeklyDeadline, 4);
       addTask("supplyWeekly", "補給依頼（週）", "内容未確認", character.supplyWeekly, "weekly", weeklyDeadline, 5);
       addTask("seasonWeekly", "シーズンミッション（週）", "未完了", character.seasonWeekly, "weekly", weeklyDeadline, 6);
-      addTask("odePurchased", "オードショップ購入", `${character.odePurchased} / 20`, character.odePurchased >= 20, "weekly", weeklyDeadline, 7);
+      addTask("odePurchased", "オードショップ購入（キャラ）", `${character.odePurchased} / 4`, character.odePurchased >= 4, "weekly", weeklyDeadline, 7);
       addTask("odeCrafted", "オード物質変換（キャラ）", `${character.odeCrafted} / 4`, character.odeCrafted >= 4, "weekly", weeklyDeadline, 8);
 
       const odeKey = character.odeNatural >= ODE_ALERT_THRESHOLD ? "odeHigh" : "odeLow";
@@ -610,6 +632,7 @@
 
   function catchUp(state, now = Date.now()) {
     const result = JSON.parse(JSON.stringify(state));
+    migrateOdePurchaseLimits(result);
     ensureWorldBosses(result);
     ensureRecurringEvents(result);
     ensureTrackingSettings(result);
@@ -646,7 +669,7 @@
       [tracked.battleground !== false, character.battleground >= 3],
       [tracked.supplyWeekly !== false, character.supplyWeekly],
       [tracked.seasonWeekly !== false, character.seasonWeekly],
-      [tracked.odePurchased !== false, character.odePurchased >= 20],
+      [tracked.odePurchased !== false, character.odePurchased >= 4],
       [tracked.odeCrafted !== false, character.odeCrafted >= 4],
     ];
     const count = (items) => ({
@@ -707,6 +730,7 @@
     ensureWorldBosses,
     ensureRecurringEvents,
     normalizeWeeklyMissionCounts,
+    migrateOdePurchaseLimits,
     normalizeCharacterNotes,
     ensureTrackingSettings,
     ensurePrioritySettings,
